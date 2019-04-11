@@ -45,7 +45,8 @@ func main() {
 	getSnapshot := func() ([]byte, error) { return kvs.getSnapshot() }
 
 	// 创建raft节点, proposeC/confChangeC的接收端
-	rc, commitC, errorC, snapshotterReady := newRaftNode(*id,
+	rc, commitC, errorC, snapshotterReady := newRaftNode(
+		*id,
 		strings.Split(*clusterList, ","),
 		*join,
 		getSnapshot,

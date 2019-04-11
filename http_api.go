@@ -42,8 +42,6 @@ func makeServerId() string {
 }
 
 func (h *httpKVAPI) handlePut(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
 	var (
 		key   = r.PostForm.Get("key")
 		value = r.PostForm.Get("value")
@@ -55,8 +53,6 @@ func (h *httpKVAPI) handlePut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
 	var (
 		countStr      = r.PostForm.Get("count")
 		count         = 1
@@ -64,6 +60,11 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 		concurrentStr = r.PostForm.Get("concurrent")
 		err           error
 	)
+
+	if !h.raftNode.isLeader() {
+		http.Error(w, "the node is follower, not leader", http.StatusBadRequest)
+		return
+	}
 
 	count, err = strconv.Atoi(countStr)
 	if err != nil {

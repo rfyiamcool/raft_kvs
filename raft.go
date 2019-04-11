@@ -311,6 +311,7 @@ func (rc *raftNode) startRaft() {
 		rc.node = raft.StartNode(c, startPeers)
 	}
 
+	// mark node and cluster ID
 	rc.transport = &rafthttp.Transport{
 		Logger:      zap.NewExample(),
 		ID:          types.ID(rc.id),
@@ -383,6 +384,12 @@ func (rc *raftNode) isLeader() bool {
 	}
 
 	return false
+}
+
+func (rc *raftNode) getLeaderNode() rafthttp.Peer {
+	nid := rc.node.Status().Lead
+	rpeer := rc.transport.Get(types.ID(nid))
+	return rpeer
 }
 
 // stop closes http, closes all channels, and stops raft.

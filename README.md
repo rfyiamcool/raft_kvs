@@ -7,6 +7,7 @@
 
 ## Modify
 
+* only leader node can post data
 * add isLeader api
 * add getSelfState api
 * more code description
