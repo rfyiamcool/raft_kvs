@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -425,8 +426,26 @@ func (rc *raftNode) maybeTriggerSnapshot() {
 	rc.snapshotIndex = rc.appliedIndex
 
 	// clean old snap
-	rc.snapshotter.CleanOldSnap()
+	rc.cleanOldSnaps()
+}
 
+func (rc *raftNode) cleanOldSnaps() error {
+	names, err := getSnapNames(rc.snapdir)
+	if err != nil {
+		return err
+	}
+
+	if len(names) <= 2 {
+		return nil
+	}
+
+	cleanFiles := names[2:len(names)]
+	for _, cf := range cleanFiles {
+		spath := filepath.Join(rc.snapdir, cf)
+		os.Remove(spath)
+	}
+
+	return nil
 }
 
 func (rc *raftNode) serveChannels() {
