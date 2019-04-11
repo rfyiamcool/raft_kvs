@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -121,9 +122,12 @@ func (rc *raftNode) saveSnap(snap raftpb.Snapshot) error {
 		Term:  snap.Metadata.Term,
 	}
 
+	// save term and index in wal
 	if err := rc.wal.SaveSnapshot(walSnap); err != nil {
 		return err
 	}
+
+	// save snapshot to file
 	if err := rc.snapshotter.SaveSnap(snap); err != nil {
 		return err
 	}
@@ -335,12 +339,35 @@ func (rc *raftNode) startRaft() {
 	// 	}
 	// }()
 
-	go func() {
-		for {
-			rc.getSelfState()
-			time.Sleep(1 * time.Second)
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		rc.cleanOldWals()
+	// 		time.Sleep(2 * time.Second)
+	// 	}
+	// }()
+}
+
+func (rc *raftNode) cleanOldWals() error {
+	walNames, err := readWALNames(rc.waldir)
+	if err != nil {
+		return err
+	}
+
+	id, ok := searchIndex(walNames, rc.snapshotIndex)
+	if !ok {
+		return errors.New("not match wal index")
+	}
+
+	if id <= 2 {
+		return nil
+	}
+
+	// more keep 1 wal log
+	for _, name := range walNames[0 : id-1] {
+		os.Remove(filepath.Join(rc.waldir, name))
+	}
+
+	return nil
 }
 
 func (rc *raftNode) getSelfState() map[string]interface{} {
@@ -422,11 +449,14 @@ func (rc *raftNode) maybeTriggerSnapshot() {
 		panic(err)
 	}
 
-	log.Printf("compacted log at index %d", compactIndex)
 	rc.snapshotIndex = rc.appliedIndex
+	log.Printf("compacted log at index %d, snapshotIndex: %d", compactIndex, rc.appliedIndex)
 
 	// clean old snap
 	rc.cleanOldSnaps()
+
+	// clean old wals
+	rc.cleanOldWals()
 }
 
 func (rc *raftNode) cleanOldSnaps() error {

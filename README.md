@@ -11,6 +11,7 @@
 * add getSelfState api
 * more code description
 * fix don't rm old snapshot bug
+* fix don't rm old wals bug
 * fix restore data raise block bug in snapshot 
 * format code
 * support leader judge
@@ -68,4 +69,47 @@ make leader
 
 ```
 make check
+```
+
+**show raft nodes info**
+
+```
+make info
+```
+
+## Benchmark
+
+benchmark raft log replication performance
+
+#### benchmark method
+
+* In a leader node, active make 100w record, and sync data to followers. 
+* leader and followers all in a node.
+
+`8 cpu core, 16 mem`
+
+#### Result
+
+**Concurrent 1 workers**
+
+```
+7 w QPS/S
+```
+
+**Concurrent 20 workers**
+
+```
+15 w QPS/S
+```
+
+**Concurrent 100 workers**
+
+```
+17 w QPS/S
+```
+
+**Concurrent 500 workers**
+
+```
+14 w QPS/S
 ```

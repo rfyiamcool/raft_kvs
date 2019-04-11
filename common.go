@@ -1,14 +1,22 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
 
 	"go.etcd.io/etcd/etcdserver/api/snap"
+	"go.etcd.io/etcd/pkg/fileutil"
+	"go.etcd.io/etcd/wal"
 )
 
-const snapSuffix = ".snap"
+var (
+	snapSuffix = ".snap"
+
+	errBadWALName = errors.New("bad wal name")
+)
 
 // getSnapNames returns the filename of the snapshots in logical time order (from newest to oldest).
 // If there is no available snapshots, an ErrNoSnapshot will be returned.
@@ -42,4 +50,57 @@ func checkSuffix(names []string) []string {
 	}
 
 	return snaps
+}
+
+func readWALNames(dirpath string) ([]string, error) {
+	names, err := fileutil.ReadDir(dirpath)
+	if err != nil {
+		return nil, err
+	}
+
+	wnames := checkWalNames(names)
+	if len(wnames) == 0 {
+		return nil, wal.ErrFileNotFound
+	}
+	return wnames, nil
+}
+
+func checkWalNames(names []string) []string {
+	wnames := make([]string, 0)
+	for _, name := range names {
+		_, _, err := parseWALName(name)
+		if err != nil {
+			continue
+		}
+
+		wnames = append(wnames, name)
+	}
+	return wnames
+}
+
+func parseWALName(str string) (seq, index uint64, err error) {
+	if !strings.HasSuffix(str, ".wal") {
+		return 0, 0, errBadWALName
+	}
+	_, err = fmt.Sscanf(str, "%016x-%016x.wal", &seq, &index)
+	return seq, index, err
+}
+
+func walName(seq, index uint64) string {
+	return fmt.Sprintf("%016x-%016x.wal", seq, index)
+}
+
+func searchIndex(names []string, index uint64) (int, bool) {
+	for i := len(names) - 1; i >= 0; i-- {
+		name := names[i]
+		_, curIndex, err := parseWALName(name)
+		if err != nil {
+			continue
+		}
+		if index >= curIndex {
+			return i, true
+		}
+	}
+
+	return -1, false
 }
