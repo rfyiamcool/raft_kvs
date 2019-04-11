@@ -22,10 +22,10 @@ import (
 )
 
 var (
-	cluster = flag.String("cluster", "http://127.0.0.1:9021", "comma separated cluster peers")
-	id      = flag.Int("id", 1, "node ID")
-	kvport  = flag.Int("port", 9121, "key-value server port")
-	join    = flag.Bool("join", false, "join an existing cluster")
+	clusterList = flag.String("cluster", "http://127.0.0.1:9021", "comma separated cluster peers")
+	id          = flag.Int("id", 1, "node ID")
+	kvport      = flag.Int("port", 9121, "key-value server port")
+	join        = flag.Bool("join", false, "join an existing cluster")
 
 	kvs *kvstore
 )
@@ -45,8 +45,8 @@ func main() {
 	getSnapshot := func() ([]byte, error) { return kvs.getSnapshot() }
 
 	// 创建raft节点, proposeC/confChangeC的接收端
-	commitC, errorC, snapshotterReady := newRaftNode(*id,
-		strings.Split(*cluster, ","),
+	rc, commitC, errorC, snapshotterReady := newRaftNode(*id,
+		strings.Split(*clusterList, ","),
 		*join,
 		getSnapshot,
 		proposeC,
@@ -55,7 +55,8 @@ func main() {
 
 	// proposeC 发送端 commitC接收端
 	kvs = newKVStore(<-snapshotterReady, proposeC, commitC, errorC)
+	kvs.start()
 
 	// 启动动http api服务器,处理发送到的raft请求
-	serveHttpKVServer(kvs, *kvport, confChangeC, errorC)
+	serveHttpKVServer(kvs, *kvport, rc, confChangeC, errorC)
 }

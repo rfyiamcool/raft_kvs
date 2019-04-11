@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -31,6 +32,7 @@ import (
 // Handler for a http based key-value store backed by raft
 type httpKVAPI struct {
 	store       *kvstore
+	raftNode    *raftNode
 	confChangeC chan<- raftpb.ConfChange
 }
 
@@ -155,6 +157,32 @@ func (h *httpKVAPI) handleJoin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *httpKVAPI) handleRaftInfo(w http.ResponseWriter, r *http.Request) {
+	info := h.raftNode.getSelfState()
+	js, err := json.Marshal(info)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Write(js)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *httpKVAPI) handleLeader(w http.ResponseWriter, r *http.Request) {
+	info := h.raftNode.getSelfState()
+	state, ok := info["self_state"]
+	if !ok {
+		http.Error(w, "not get self_state", http.StatusBadRequest)
+		return
+	}
+
+	w.Write([]byte(
+		state.(string),
+	))
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *httpKVAPI) handleLeave(w http.ResponseWriter, r *http.Request) {
 	var key = r.RequestURI
 	defer r.Body.Close()
@@ -177,7 +205,7 @@ func (h *httpKVAPI) handleLeave(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveHttpKVAPI starts a key-value server with a GET/PUT API and listens.
-func serveHttpKVServer(kv *kvstore, port int, confChangeC chan<- raftpb.ConfChange, errorC <-chan error) {
+func serveHttpKVServer(kv *kvstore, port int, rc *raftNode, confChangeC chan<- raftpb.ConfChange, errorC <-chan error) {
 	var (
 		srv = http.Server{
 			Addr: ":" + strconv.Itoa(port),
@@ -186,12 +214,15 @@ func serveHttpKVServer(kv *kvstore, port int, confChangeC chan<- raftpb.ConfChan
 		callHandler = &httpKVAPI{
 			store:       kv,
 			confChangeC: confChangeC,
+			raftNode:    rc,
 		}
 	)
 
 	http.HandleFunc("/batch_put", callHandler.handleBatchPut)
 	http.HandleFunc("/put", callHandler.handlePut)
 	http.HandleFunc("/get", callHandler.handleGet)
+	http.HandleFunc("/leader", callHandler.handleLeader)
+	http.HandleFunc("/info", callHandler.handleRaftInfo)
 	http.HandleFunc("/join", callHandler.handleJoin)
 	http.HandleFunc("/leave", callHandler.handleLeave)
 

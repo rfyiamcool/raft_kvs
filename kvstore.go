@@ -27,6 +27,8 @@ import (
 // a key-value store backed by raft
 type kvstore struct {
 	proposeC    chan<- string // channel for proposing updates
+	commitC     <-chan *string
+	errorC      <-chan error
 	snapshotter *snap.Snapshotter
 
 	mu      sync.RWMutex
@@ -43,14 +45,19 @@ func newKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <
 		proposeC:    proposeC,
 		kvStore:     make(map[string]string),
 		snapshotter: snapshotter,
+		commitC:     commitC,
+		errorC:      errorC,
 	}
 
-	// replay log into key-value map
-	s.readCommits(commitC, errorC)
-
-	// read commits from raft into kvStore map until error
-	go s.readCommits(commitC, errorC)
 	return s
+}
+
+// start read commits from raft into kvStore map until error
+func (s *kvstore) start() {
+	// replay log into key-value map
+	// s.readCommits(commitC, errorC)
+
+	go s.readCommits(s.commitC, s.errorC)
 }
 
 // Lookup 直接从map里获取数据
@@ -81,7 +88,8 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 			// OR signaled to load snapshot
 			snapshot, err := s.snapshotter.Load()
 			if err == snap.ErrNoSnapshot {
-				return
+				// return
+				continue
 			}
 
 			if err != nil {

@@ -80,7 +80,7 @@ var defaultSnapshotCount uint64 = 10000 * 10
 // commit channel, followed by a nil message (to indicate the channel is
 // current), then new log entries. To shutdown, close proposeC and read errorC.
 func newRaftNode(id int, peers []string, join bool, getSnapshot func() ([]byte, error), proposeC <-chan string,
-	confChangeC <-chan raftpb.ConfChange) (<-chan *string, <-chan error, <-chan *snap.Snapshotter) {
+	confChangeC <-chan raftpb.ConfChange) (*raftNode, <-chan *string, <-chan error, <-chan *snap.Snapshotter) {
 
 	var (
 		commitC = make(chan *string)
@@ -108,7 +108,7 @@ func newRaftNode(id int, peers []string, join bool, getSnapshot func() ([]byte, 
 	)
 
 	go rc.startRaft()
-	return commitC, errorC, rc.snapshotterReady
+	return rc, commitC, errorC, rc.snapshotterReady
 }
 
 func (rc *raftNode) saveSnap(snap raftpb.Snapshot) error {
@@ -333,6 +333,28 @@ func (rc *raftNode) startRaft() {
 	// 		time.Sleep(1 * time.Second)
 	// 	}
 	// }()
+
+	go func() {
+		for {
+			rc.getSelfState()
+			time.Sleep(1 * time.Second)
+		}
+	}()
+}
+
+func (rc *raftNode) getSelfState() map[string]interface{} {
+	return map[string]interface{}{
+		"self_state": rc.transport.ServerStats.State.String(),
+		"node":       rc.node.Status,
+	}
+}
+
+func (rc *raftNode) isLeader() bool {
+	if rc.transport.ServerStats.State == raft.StateLeader {
+		return true
+	}
+
+	return false
 }
 
 // stop closes http, closes all channels, and stops raft.
@@ -401,6 +423,10 @@ func (rc *raftNode) maybeTriggerSnapshot() {
 
 	log.Printf("compacted log at index %d", compactIndex)
 	rc.snapshotIndex = rc.appliedIndex
+
+	// clean old snap
+	rc.snapshotter.CleanOldSnap()
+
 }
 
 func (rc *raftNode) serveChannels() {

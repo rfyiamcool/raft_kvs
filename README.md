@@ -3,11 +3,15 @@
 * benchmark raft replication log performance
 * test how long does follower switch leader
 
-`refer code from go.etcd.io/etcd/contrib/raftexample`
+`some code refer from go.etcd.io/etcd/contrib/raftexample`
 
 ## Modify
 
+* add isLeader api
+* add getSelfState api
 * more code description
+* fix don't rm old snapshot bug
+* fix restore data raise block bug in snapshot 
 * format code
 * support leader judge
 * modify http api
