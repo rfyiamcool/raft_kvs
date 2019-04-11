@@ -81,19 +81,20 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 		wg    sync.WaitGroup
 	)
 
+	var incr int64 = 0
 	for index := 0; index < concurrent; index++ {
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
 
-			var incr int64 = 0
 			for {
-				incr = atomic.AddInt64(&incr, 1)
-				if incr > int64(count) {
+				gid := atomic.AddInt64(&incr, 1)
+				if gid > int64(count) {
 					break
 				}
 
-				idStr := fmt.Sprintf("%v", incr)
+				idStr := fmt.Sprintf("%v", gid)
 				h.store.Propose(idStr, start.String())
 			}
 		}()
@@ -106,7 +107,7 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 	log.Printf("----")
 
 	resp := fmt.Sprintf("total count: %d, thread: %v, time cost: %v",
-		concurrent*count,
+		count,
 		concurrent,
 		take.String(),
 	)
