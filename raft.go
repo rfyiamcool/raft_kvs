@@ -346,7 +346,7 @@ func (rc *raftNode) startRaft() {
 func (rc *raftNode) getSelfState() map[string]interface{} {
 	return map[string]interface{}{
 		"self_state": rc.transport.ServerStats.State.String(),
-		"node":       rc.node.Status,
+		"node":       rc.node.Status(),
 	}
 }
 

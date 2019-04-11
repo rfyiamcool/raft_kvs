@@ -51,4 +51,21 @@ make check
 
 make batch20w
 make check
+
+make batch100w
+make check
+```
+
+## Method
+
+**show leader and followrer**
+
+```
+make leader
+```
+
+**check a kv record, check value in all nodes**
+
+```
+make check
 ```

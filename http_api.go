@@ -101,11 +101,8 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wg.Wait()
-	take := time.Now().Sub(start)
-	log.Printf("----")
-	log.Printf("batch put cost %s \n", take.String())
-	log.Printf("----")
 
+	take := time.Now().Sub(start)
 	resp := fmt.Sprintf("total count: %d, thread: %v, time cost: %v",
 		count,
 		concurrent,

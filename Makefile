@@ -88,6 +88,17 @@ leader:
 	@ echo "node 3"
 	@ curl "http://127.0.0.1:33333/leader"; exit 0
 
+info:
+	@ echo "show raft nodes info"
+	@ echo "node 1:"
+	@ curl "http://127.0.0.1:11111/info"; exit 0
+	@ echo "\n"
+	@ echo "node 2"
+	@ curl "http://127.0.0.1:22222/info"; exit 0
+	@ echo "\n"
+	@ echo "node 3"
+	@ curl "http://127.0.0.1:33333/info"; exit 0
+
 run:
 	@ echo "run..."
 	rm -rf raftexample
