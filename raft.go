@@ -291,10 +291,13 @@ func (rc *raftNode) startRaft() {
 		rpeers[i] = raft.Peer{ID: uint64(i + 1)}
 	}
 
+	// see raft/raft.go; 		electionTimeout = c.ElectionTick
+	// https://github.com/etcd-io/etcd/blob/master/Documentation/faq.md#what-does-the-etcd-warning-failed-to-send-out-heartbeat-on-time-mean
+	// election-timeout configuration to be at least 5 * heartbeat
 	c := &raft.Config{
 		ID:                        uint64(rc.id),
-		ElectionTick:              10,
-		HeartbeatTick:             1,
+		ElectionTick:              10, // n * 100ms
+		HeartbeatTick:             1,  // n * 100ms; leader send heartbeat
 		Storage:                   rc.raftStorage,
 		MaxSizePerMsg:             1024 * 1024,
 		MaxInflightMsgs:           256,
