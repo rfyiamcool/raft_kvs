@@ -73,9 +73,9 @@ check:
 	@ echo "check"
 	curl "http://127.0.0.1:11111/get?key=10000"; exit 0
 	@ echo "\n\n"
-	curl "http://127.0.0.1:22222/get?key=10000" exit 0
+	curl "http://127.0.0.1:22222/get?key=10000"; exit 0
 	@ echo "\n\n"
-	curl "http://127.0.0.1:33333/get?key=10000" exit 0
+	curl "http://127.0.0.1:33333/get?key=10000"; exit 0
 
 leader:
 	@ echo "leader and followers"

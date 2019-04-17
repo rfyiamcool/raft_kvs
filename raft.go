@@ -26,16 +26,16 @@ import (
 	"strconv"
 	"time"
 
-	"go.etcd.io/etcd/etcdserver/api/rafthttp"
-	"go.etcd.io/etcd/etcdserver/api/snap"
-	stats "go.etcd.io/etcd/etcdserver/api/v2stats"
-	"go.etcd.io/etcd/pkg/fileutil"
-	"go.etcd.io/etcd/pkg/types"
-	"go.etcd.io/etcd/raft"
-	"go.etcd.io/etcd/raft/raftpb"
-	"go.etcd.io/etcd/wal"
-	"go.etcd.io/etcd/wal/walpb"
+	"github.com/rfyiamcool/raft_kvs/consensus/raft"
+	"github.com/rfyiamcool/raft_kvs/consensus/raft/raftpb"
+	"github.com/rfyiamcool/raft_kvs/consensus/rafthttp"
+	"github.com/rfyiamcool/raft_kvs/consensus/snap"
+	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
+	"github.com/rfyiamcool/raft_kvs/consensus/wal"
+	"github.com/rfyiamcool/raft_kvs/consensus/wal/walpb"
 
+	"github.com/rfyiamcool/raft_kvs/consensus/utils/fileutil"
+	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
 	"go.uber.org/zap"
 )
 

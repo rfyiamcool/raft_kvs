@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"go.etcd.io/etcd/etcdserver/api/snap"
-	"go.etcd.io/etcd/pkg/fileutil"
-	"go.etcd.io/etcd/wal"
+	"github.com/rfyiamcool/raft_kvs/consensus/snap"
+	"github.com/rfyiamcool/raft_kvs/consensus/utils/fileutil"
+	"github.com/rfyiamcool/raft_kvs/consensus/wal"
 )
 
 var (

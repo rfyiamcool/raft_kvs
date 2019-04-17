@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.etcd.io/etcd/raft/raftpb"
+	"github.com/rfyiamcool/raft_kvs/consensus/raft/raftpb"
 )
 
 // Handler for a http based key-value store backed by raft
