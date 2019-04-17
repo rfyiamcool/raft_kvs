@@ -22,10 +22,10 @@ import (
 	"github.com/rfyiamcool/raft_kvs/consensus/raft"
 	"github.com/rfyiamcool/raft_kvs/consensus/raft/raftpb"
 	"github.com/rfyiamcool/raft_kvs/consensus/snap"
-	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
+	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 
-	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
 
@@ -94,7 +94,7 @@ type Peer interface {
 // A pipeline is a series of http clients that send http requests to the remote.
 // It is only used when the stream has not been established.
 type peer struct {
-	lg *zap.Logger
+	lg *logtool.RLogHandle
 
 	localID types.ID
 	// id of the remote raft peer node
@@ -125,13 +125,17 @@ type peer struct {
 
 func startPeer(t *Transport, urls types.URLs, peerID types.ID, fs *stats.FollowerStats) *peer {
 	if t.Logger != nil {
-		t.Logger.Info("starting remote peer", zap.String("remote-peer-id", peerID.String()))
+		t.Logger.Info("starting remote peer", map[string]interface{}{
+			"remote-peer-id": peerID.String(),
+		})
 	} else {
 		plog.Infof("starting peer %s...", peerID)
 	}
 	defer func() {
 		if t.Logger != nil {
-			t.Logger.Info("started remote peer", zap.String("remote-peer-id", peerID.String()))
+			t.Logger.Info("started remote peer", map[string]interface{}{
+				"remote-peer-id": peerID.String(),
+			})
 		} else {
 			plog.Infof("started peer %s", peerID)
 		}
@@ -176,7 +180,9 @@ func startPeer(t *Transport, urls types.URLs, peerID types.ID, fs *stats.Followe
 			case mm := <-p.recvc:
 				if err := r.Process(ctx, mm); err != nil {
 					if t.Logger != nil {
-						t.Logger.Warn("failed to process Raft message", zap.Error(err))
+						t.Logger.Warn("failed to process Raft message", map[string]interface{}{
+							"error": err,
+						})
 					} else {
 						plog.Warningf("failed to process raft message (%v)", err)
 					}
@@ -251,27 +257,27 @@ func (p *peer) send(m raftpb.Message) {
 		}
 		if p.status.isActive() {
 			if p.lg != nil {
-				p.lg.Warn(
-					"dropped internal Raft message since sending buffer is full (overloaded network)",
-					zap.String("message-type", m.Type.String()),
-					zap.String("local-member-id", p.localID.String()),
-					zap.String("from", types.ID(m.From).String()),
-					zap.String("remote-peer-id", p.id.String()),
-					zap.Bool("remote-peer-active", p.status.isActive()),
-				)
+				p.lg.Warn("dropped internal Raft message since sending buffer is full (overloaded network)",
+					map[string]interface{}{
+						"message-type":       m.Type.String(),
+						"local-member-id":    p.localID.String(),
+						"from":               types.ID(m.From).String(),
+						"remote-peer-id":     p.id.String(),
+						"remote-peer-active": p.status.isActive(),
+					})
 			} else {
 				plog.MergeWarningf("dropped internal raft message to %s since %s's sending buffer is full (bad/overloaded network)", p.id, name)
 			}
 		} else {
 			if p.lg != nil {
-				p.lg.Warn(
-					"dropped internal Raft message since sending buffer is full (overloaded network)",
-					zap.String("message-type", m.Type.String()),
-					zap.String("local-member-id", p.localID.String()),
-					zap.String("from", types.ID(m.From).String()),
-					zap.String("remote-peer-id", p.id.String()),
-					zap.Bool("remote-peer-active", p.status.isActive()),
-				)
+				p.lg.Warn("dropped internal Raft message since sending buffer is full (overloaded network)",
+					map[string]interface{}{
+						"message-type":       m.Type.String(),
+						"local-member-id":    p.localID.String(),
+						"from":               types.ID(m.From).String(),
+						"remote-peer-id":     p.id.String(),
+						"remote-peer-active": p.status.isActive(),
+					})
 			} else {
 				plog.Debugf("dropped %s to %s since %s's sending buffer is full", m.Type, p.id, name)
 			}
@@ -297,7 +303,9 @@ func (p *peer) attachOutgoingConn(conn *outgoingConn) {
 		ok = p.writer.attach(conn)
 	default:
 		if p.lg != nil {
-			p.lg.Panic("unknown stream type", zap.String("type", conn.t.String()))
+			p.lg.Panic("unknown stream type", map[string]interface{}{
+				"type": conn.t.String(),
+			})
 		} else {
 			plog.Panicf("unhandled stream type %s", conn.t)
 		}
@@ -330,14 +338,18 @@ func (p *peer) Resume() {
 
 func (p *peer) stop() {
 	if p.lg != nil {
-		p.lg.Info("stopping remote peer", zap.String("remote-peer-id", p.id.String()))
+		p.lg.Info("stopping remote peer", map[string]interface{}{
+			"remote-peer-id": p.id.String(),
+		})
 	} else {
 		plog.Infof("stopping peer %s...", p.id)
 	}
 
 	defer func() {
 		if p.lg != nil {
-			p.lg.Info("stopped remote peer", zap.String("remote-peer-id", p.id.String()))
+			p.lg.Info("stopped remote peer", map[string]interface{}{
+				"remote-peer-id": p.id.String(),
+			})
 		} else {
 			plog.Infof("stopped peer %s", p.id)
 		}

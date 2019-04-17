@@ -18,18 +18,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"sync"
 	"time"
 
-	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
-	"github.com/rfyiamcool/raft_kvs/consensus/utils/pbutil"
-	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
 	"github.com/rfyiamcool/raft_kvs/consensus/raft"
 	"github.com/rfyiamcool/raft_kvs/consensus/raft/raftpb"
-
-	"go.uber.org/zap"
+	"github.com/rfyiamcool/raft_kvs/consensus/utils/pbutil"
+	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
+	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
 )
 
 const (
@@ -69,11 +66,10 @@ func (p *pipeline) start() {
 	}
 
 	if p.tr != nil && p.tr.Logger != nil {
-		p.tr.Logger.Info(
-			"started HTTP pipelining with remote peer",
-			zap.String("local-member-id", p.tr.ID.String()),
-			zap.String("remote-peer-id", p.peerID.String()),
-		)
+		p.tr.Logger.Info("started HTTP pipelining with remote peer", map[string]interface{}{
+			"local-member-id": p.tr.ID.String(),
+			"remote-peer-id":  p.peerID.String(),
+		})
 	} else {
 		plog.Infof("started HTTP pipelining with peer %s", p.peerID)
 	}
@@ -84,11 +80,10 @@ func (p *pipeline) stop() {
 	p.wg.Wait()
 
 	if p.tr != nil && p.tr.Logger != nil {
-		p.tr.Logger.Info(
-			"stopped HTTP pipelining with remote peer",
-			zap.String("local-member-id", p.tr.ID.String()),
-			zap.String("remote-peer-id", p.peerID.String()),
-		)
+		p.tr.Logger.Info("stopped HTTP pipelining with remote peer", map[string]interface{}{
+			"local-member-id": p.tr.ID.String(),
+			"remote-peer-id":  p.peerID.String(),
+		})
 	} else {
 		plog.Infof("stopped HTTP pipelining with peer %s", p.peerID)
 	}
@@ -135,7 +130,6 @@ func (p *pipeline) handle() {
 // post POSTs a data payload to a url. Returns nil if the POST succeeds,
 // error on any failure.
 func (p *pipeline) post(data []byte) (err error) {
-	fmt.Println(137)
 	u := p.picker.pick()
 	req := createPostRequest(u, RaftPrefix, bytes.NewBuffer(data), "application/protobuf", p.tr.URLs, p.tr.ID, p.tr.ClusterID)
 
@@ -157,12 +151,12 @@ func (p *pipeline) post(data []byte) (err error) {
 		p.picker.unreachable(u)
 		return err
 	}
-	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		p.picker.unreachable(u)
 		return err
 	}
+	resp.Body.Close()
 
 	err = checkPostResponse(resp, b, req, p.peerID)
 	if err != nil {

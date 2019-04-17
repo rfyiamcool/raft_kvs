@@ -27,9 +27,9 @@ import (
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/httputil"
 	pioutil "github.com/rfyiamcool/raft_kvs/consensus/utils/ioutil"
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 
 	"github.com/dustin/go-humanize"
-	"go.uber.org/zap"
 )
 
 var (
@@ -79,13 +79,12 @@ func (s *snapshotSender) send(merged snap.Message) {
 	req := createPostRequest(u, RaftSnapshotPrefix, body, "application/octet-stream", s.tr.URLs, s.from, s.cid)
 
 	if s.tr.Logger != nil {
-		s.tr.Logger.Info(
-			"sending database snapshot",
-			zap.Uint64("snapshot-index", m.Snapshot.Metadata.Index),
-			zap.String("remote-peer-id", to),
-			zap.Int64("bytes", merged.TotalSize),
-			zap.String("size", humanize.Bytes(uint64(merged.TotalSize))),
-		)
+		s.tr.Logger.Info("sending database snapshot", map[string]interface{}{
+			"snapshot-index": m.Snapshot.Metadata.Index,
+			"remote-peer-id": to,
+			"bytes":          merged.TotalSize,
+			"size":           humanize.Bytes(uint64(merged.TotalSize)),
+		})
 	} else {
 		plog.Infof("start to send database snapshot [index: %d, to %s]...", m.Snapshot.Metadata.Index, types.ID(m.To))
 	}
@@ -94,14 +93,12 @@ func (s *snapshotSender) send(merged snap.Message) {
 	defer merged.CloseWithError(err)
 	if err != nil {
 		if s.tr.Logger != nil {
-			s.tr.Logger.Warn(
-				"failed to send database snapshot",
-				zap.Uint64("snapshot-index", m.Snapshot.Metadata.Index),
-				zap.String("remote-peer-id", to),
-				zap.Int64("bytes", merged.TotalSize),
-				zap.String("size", humanize.Bytes(uint64(merged.TotalSize))),
-				zap.Error(err),
-			)
+			s.tr.Logger.Warn("failed to send database snapshot", map[string]interface{}{
+				"snapshot-index": m.Snapshot.Metadata.Index,
+				"remote-peer-id": to,
+				"bytes":          merged.TotalSize,
+				"size":           humanize.Bytes(uint64(merged.TotalSize)),
+			})
 		} else {
 			plog.Warningf("database snapshot [index: %d, to: %s] failed to be sent out (%v)", m.Snapshot.Metadata.Index, types.ID(m.To), err)
 		}
@@ -127,13 +124,12 @@ func (s *snapshotSender) send(merged snap.Message) {
 	s.r.ReportSnapshot(m.To, raft.SnapshotFinish)
 
 	if s.tr.Logger != nil {
-		s.tr.Logger.Info(
-			"sent database snapshot",
-			zap.Uint64("snapshot-index", m.Snapshot.Metadata.Index),
-			zap.String("remote-peer-id", to),
-			zap.Int64("bytes", merged.TotalSize),
-			zap.String("size", humanize.Bytes(uint64(merged.TotalSize))),
-		)
+		s.tr.Logger.Info("sent database snapshot", map[string]interface{}{
+			"snapshot-index": m.Snapshot.Metadata.Index,
+			"remote-peer-id": to,
+			"bytes":          merged.TotalSize,
+			"size":           humanize.Bytes(uint64(merged.TotalSize)),
+		})
 	} else {
 		plog.Infof("database snapshot [index: %d, to: %s] sent out successfully", m.Snapshot.Metadata.Index, types.ID(m.To))
 	}
@@ -184,13 +180,15 @@ func (s *snapshotSender) post(req *http.Request) (err error) {
 	}
 }
 
-func createSnapBody(lg *zap.Logger, merged snap.Message) io.ReadCloser {
+func createSnapBody(lg *logtool.RLogHandle, merged snap.Message) io.ReadCloser {
 	buf := new(bytes.Buffer)
 	enc := &messageEncoder{w: buf}
 	// encode raft message
 	if err := enc.encode(&merged.Message); err != nil {
 		if lg != nil {
-			lg.Panic("failed to encode message", zap.Error(err))
+			lg.Panic("failed to encode message", map[string]interface{}{
+				"error": err,
+			})
 		} else {
 			plog.Panicf("encode message error (%v)", err)
 		}

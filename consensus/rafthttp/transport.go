@@ -27,14 +27,14 @@ import (
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/transport"
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
 	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 
 	"github.com/coreos/pkg/capnslog"
 	"github.com/xiang90/probing"
-	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
 
-var plog = logutil.NewMergeLogger(capnslog.NewPackageLogger("github.com/rfyiamcool/raft_kvs", "consensus/rafthttp"))
+var plog = logutil.NewMergeLogger(capnslog.NewPackageLogger("github.com/fearblackcat/swiftRaft", "utils/api/rafthttp"))
 
 type Raft interface {
 	Process(ctx context.Context, m raftpb.Message) error
@@ -99,7 +99,7 @@ type Transporter interface {
 // User needs to call Start before calling other functions, and call
 // Stop when the Transport is no longer used.
 type Transport struct {
-	Logger *zap.Logger
+	Logger *logtool.RLogHandle
 
 	DialTimeout time.Duration // maximum duration before timing out dial of the request
 	// DialRetryFrequency defines the frequency of streamReader dial retrial attempts;
@@ -203,11 +203,11 @@ func (t *Transport) Send(msgs []raftpb.Message) {
 		}
 
 		if t.Logger != nil {
-			t.Logger.Debug(
-				"ignored message send request; unknown remote peer target",
-				zap.String("type", m.Type.String()),
-				zap.String("unknown-target-peer-id", to.String()),
-			)
+			t.Logger.Debug("ignored message send request; unknown remote peer target",
+				map[string]interface{}{
+					"type":                   m.Type.String(),
+					"unknown-target-peer-id": to.String(),
+				})
 		} else {
 			plog.Debugf("ignored message %s (sent to unknown peer %s)", m.Type, to)
 		}
@@ -283,7 +283,10 @@ func (t *Transport) AddRemote(id types.ID, us []string) {
 	urls, err := types.NewURLs(us)
 	if err != nil {
 		if t.Logger != nil {
-			t.Logger.Panic("failed NewURLs", zap.Strings("urls", us), zap.Error(err))
+			t.Logger.Panic("failed NewURLs", map[string]interface{}{
+				"urls":  us,
+				"error": err,
+			})
 		} else {
 			plog.Panicf("newURLs %+v should never fail: %+v", us, err)
 		}
@@ -291,12 +294,11 @@ func (t *Transport) AddRemote(id types.ID, us []string) {
 	t.remotes[id] = startRemote(t, urls, id)
 
 	if t.Logger != nil {
-		t.Logger.Info(
-			"added new remote peer",
-			zap.String("local-member-id", t.ID.String()),
-			zap.String("remote-peer-id", id.String()),
-			zap.Strings("remote-peer-urls", us),
-		)
+		t.Logger.Info("added new remote peer", map[string]interface{}{
+			"local-member-id":  t.ID.String(),
+			"remote-peer-id":   id.String(),
+			"remote-peer-urls": us,
+		})
 	}
 }
 
@@ -313,7 +315,10 @@ func (t *Transport) AddPeer(id types.ID, us []string) {
 	urls, err := types.NewURLs(us)
 	if err != nil {
 		if t.Logger != nil {
-			t.Logger.Panic("failed NewURLs", zap.Strings("urls", us), zap.Error(err))
+			t.Logger.Panic("failed NewURLs", map[string]interface{}{
+				"urls":  us,
+				"error": err,
+			})
 		} else {
 			plog.Panicf("newURLs %+v should never fail: %+v", us, err)
 		}
@@ -324,12 +329,11 @@ func (t *Transport) AddPeer(id types.ID, us []string) {
 	addPeerToProber(t.Logger, t.streamProber, id.String(), us, RoundTripperNameRaftMessage, rttSec)
 
 	if t.Logger != nil {
-		t.Logger.Info(
-			"added remote peer",
-			zap.String("local-member-id", t.ID.String()),
-			zap.String("remote-peer-id", id.String()),
-			zap.Strings("remote-peer-urls", us),
-		)
+		t.Logger.Info("added remote peer", map[string]interface{}{
+			"local-member-id":  t.ID.String(),
+			"remote-peer-id":   id.String(),
+			"remote-peer-urls": us,
+		})
 	} else {
 		plog.Infof("added peer %s", id)
 	}
@@ -355,7 +359,9 @@ func (t *Transport) removePeer(id types.ID) {
 		peer.stop()
 	} else {
 		if t.Logger != nil {
-			t.Logger.Panic("unexpected removal of unknown remote peer", zap.String("remote-peer-id", id.String()))
+			t.Logger.Panic("unexpected removal of unknown remote peer", map[string]interface{}{
+				"remote-peer-id": id.String(),
+			})
 		} else {
 			plog.Panicf("unexpected removal of unknown peer '%d'", id)
 		}
@@ -366,11 +372,10 @@ func (t *Transport) removePeer(id types.ID) {
 	t.streamProber.Remove(id.String())
 
 	if t.Logger != nil {
-		t.Logger.Info(
-			"removed remote peer",
-			zap.String("local-member-id", t.ID.String()),
-			zap.String("removed-remote-peer-id", id.String()),
-		)
+		t.Logger.Info("removed remote peer", map[string]interface{}{
+			"local-member-id":        t.ID.String(),
+			"removed-remote-peer-id": id.String(),
+		})
 	} else {
 		plog.Infof("removed peer %s", id)
 	}
@@ -386,7 +391,10 @@ func (t *Transport) UpdatePeer(id types.ID, us []string) {
 	urls, err := types.NewURLs(us)
 	if err != nil {
 		if t.Logger != nil {
-			t.Logger.Panic("failed NewURLs", zap.Strings("urls", us), zap.Error(err))
+			t.Logger.Panic("failed NewURLs", map[string]interface{}{
+				"urls":  us,
+				"error": err,
+			})
 		} else {
 			plog.Panicf("newURLs %+v should never fail: %+v", us, err)
 		}
@@ -399,12 +407,11 @@ func (t *Transport) UpdatePeer(id types.ID, us []string) {
 	addPeerToProber(t.Logger, t.streamProber, id.String(), us, RoundTripperNameRaftMessage, rttSec)
 
 	if t.Logger != nil {
-		t.Logger.Info(
-			"updated remote peer",
-			zap.String("local-member-id", t.ID.String()),
-			zap.String("updated-remote-peer-id", id.String()),
-			zap.Strings("updated-remote-peer-urls", us),
-		)
+		t.Logger.Info("updated remote peer", map[string]interface{}{
+			"local-member-id":          t.ID.String(),
+			"updated-remote-peer-id":   id.String(),
+			"updated-remote-peer-urls": us,
+		})
 	} else {
 		plog.Infof("updated peer %s", id)
 	}

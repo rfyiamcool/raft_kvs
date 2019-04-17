@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 	"github.com/xiang90/probing"
-	"go.uber.org/zap"
 )
 
 const (
@@ -38,7 +38,7 @@ var (
 	statusErrorInterval      = 5 * time.Second
 )
 
-func addPeerToProber(lg *zap.Logger, p probing.Prober, id string, us []string, roundTripperName string, rttSecProm *prometheus.HistogramVec) {
+func addPeerToProber(lg *logtool.RLogHandle, p probing.Prober, id string, us []string, roundTripperName string, rttSecProm *prometheus.HistogramVec) {
 	hus := make([]string, len(us))
 	for i := range us {
 		hus[i] = us[i] + ProbingPrefix
@@ -49,7 +49,9 @@ func addPeerToProber(lg *zap.Logger, p probing.Prober, id string, us []string, r
 	s, err := p.Status(id)
 	if err != nil {
 		if lg != nil {
-			lg.Warn("failed to add peer into prober", zap.String("remote-peer-id", id))
+			lg.Warn("failed to add peer into prober", map[string]interface{}{
+				"remote-peer-id": id,
+			})
 		} else {
 			plog.Errorf("failed to add peer %s into prober", id)
 		}
@@ -59,7 +61,7 @@ func addPeerToProber(lg *zap.Logger, p probing.Prober, id string, us []string, r
 	go monitorProbingStatus(lg, s, id, roundTripperName, rttSecProm)
 }
 
-func monitorProbingStatus(lg *zap.Logger, s probing.Status, id string, roundTripperName string, rttSecProm *prometheus.HistogramVec) {
+func monitorProbingStatus(lg *logtool.RLogHandle, s probing.Status, id string, roundTripperName string, rttSecProm *prometheus.HistogramVec) {
 	// set the first interval short to log error early.
 	interval := statusErrorInterval
 	for {
@@ -67,13 +69,11 @@ func monitorProbingStatus(lg *zap.Logger, s probing.Status, id string, roundTrip
 		case <-time.After(interval):
 			if !s.Health() {
 				if lg != nil {
-					lg.Warn(
-						"prober detected unhealthy status",
-						zap.String("round-tripper-name", roundTripperName),
-						zap.String("remote-peer-id", id),
-						zap.Duration("rtt", s.SRTT()),
-						zap.Error(s.Err()),
-					)
+					lg.Warn("prober detected unhealthy status", map[string]interface{}{
+						"round-tripper-name": roundTripperName,
+						"remote-peer-id":     id,
+						"rtt":                s.SRTT(),
+					})
 				} else {
 					plog.Warningf("health check for peer %s could not connect: %v", id, s.Err())
 				}
@@ -83,14 +83,12 @@ func monitorProbingStatus(lg *zap.Logger, s probing.Status, id string, roundTrip
 			}
 			if s.ClockDiff() > time.Second {
 				if lg != nil {
-					lg.Warn(
-						"prober found high clock drift",
-						zap.String("round-tripper-name", roundTripperName),
-						zap.String("remote-peer-id", id),
-						zap.Duration("clock-drift", s.SRTT()),
-						zap.Duration("rtt", s.ClockDiff()),
-						zap.Error(s.Err()),
-					)
+					lg.Warn("prober found high clock drift", map[string]interface{}{
+						"round-tripper-name": roundTripperName,
+						"remote-peer-id":     id,
+						"clock-drift":        s.SRTT(),
+						"rtt":                s.ClockDiff(),
+					})
 				} else {
 					plog.Warningf("the clock difference against peer %s is too high [%v > %v]", id, s.ClockDiff(), time.Second)
 				}

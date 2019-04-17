@@ -15,15 +15,13 @@
 package rafthttp
 
 import (
-	"fmt"
-	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
 	"github.com/rfyiamcool/raft_kvs/consensus/raft/raftpb"
-
-	"go.uber.org/zap"
+	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 )
 
 type remote struct {
-	lg       *zap.Logger
+	lg       *logtool.RLogHandle
 	localID  types.ID
 	id       types.ID
 	status   *peerStatus
@@ -53,33 +51,32 @@ func startRemote(tr *Transport, urls types.URLs, id types.ID) *remote {
 }
 
 func (g *remote) send(m raftpb.Message) {
-	fmt.Println(55)
 	select {
 	case g.pipeline.msgc <- m:
 	default:
 		if g.status.isActive() {
 			if g.lg != nil {
-				g.lg.Warn(
-					"dropped internal Raft message since sending buffer is full (overloaded network)",
-					zap.String("message-type", m.Type.String()),
-					zap.String("local-member-id", g.localID.String()),
-					zap.String("from", types.ID(m.From).String()),
-					zap.String("remote-peer-id", g.id.String()),
-					zap.Bool("remote-peer-active", g.status.isActive()),
-				)
+				g.lg.Warn("dropped internal Raft message since sending buffer is full (overloaded network)",
+					map[string]interface{}{
+						"message-type":       m.Type.String(),
+						"local-member-id":    g.localID.String(),
+						"from":               types.ID(m.From).String(),
+						"remote-peer-id":     g.id.String(),
+						"remote-peer-active": g.status.isActive(),
+					})
 			} else {
 				plog.MergeWarningf("dropped internal raft message to %s since sending buffer is full (bad/overloaded network)", g.id)
 			}
 		} else {
 			if g.lg != nil {
-				g.lg.Warn(
-					"dropped Raft message since sending buffer is full (overloaded network)",
-					zap.String("message-type", m.Type.String()),
-					zap.String("local-member-id", g.localID.String()),
-					zap.String("from", types.ID(m.From).String()),
-					zap.String("remote-peer-id", g.id.String()),
-					zap.Bool("remote-peer-active", g.status.isActive()),
-				)
+				g.lg.Warn("dropped Raft message since sending buffer is full (overloaded network)",
+					map[string]interface{}{
+						"message-type":       m.Type.String(),
+						"local-member-id":    g.localID.String(),
+						"from":               types.ID(m.From).String(),
+						"remote-peer-id":     g.id.String(),
+						"remote-peer-active": g.status.isActive(),
+					})
 			} else {
 				plog.Debugf("dropped %s to %s since sending buffer is full", m.Type, g.id)
 			}

@@ -21,8 +21,7 @@ import (
 	"time"
 
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
-
-	"go.uber.org/zap"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 )
 
 type failureType struct {
@@ -31,7 +30,7 @@ type failureType struct {
 }
 
 type peerStatus struct {
-	lg     *zap.Logger
+	lg     *logtool.RLogHandle
 	local  types.ID
 	id     types.ID
 	mu     sync.Mutex // protect variables below
@@ -39,7 +38,7 @@ type peerStatus struct {
 	since  time.Time
 }
 
-func newPeerStatus(lg *zap.Logger, local, id types.ID) *peerStatus {
+func newPeerStatus(lg *logtool.RLogHandle, local, id types.ID) *peerStatus {
 	return &peerStatus{lg: lg, local: local, id: id}
 }
 
@@ -48,7 +47,9 @@ func (s *peerStatus) activate() {
 	defer s.mu.Unlock()
 	if !s.active {
 		if s.lg != nil {
-			s.lg.Info("peer became active", zap.String("peer-id", s.id.String()))
+			s.lg.Info("peer became active", map[string]interface{}{
+				"peer-id": s.id.String(),
+			})
 		} else {
 			plog.Infof("peer %s became active", s.id)
 		}
@@ -65,7 +66,10 @@ func (s *peerStatus) deactivate(failure failureType, reason string) {
 	msg := fmt.Sprintf("failed to %s %s on %s (%s)", failure.action, s.id, failure.source, reason)
 	if s.active {
 		if s.lg != nil {
-			s.lg.Warn("peer became inactive (message send to peer failed)", zap.String("peer-id", s.id.String()), zap.Error(errors.New(msg)))
+			s.lg.Warn("peer became inactive (message send to peer failed)", map[string]interface{}{
+				"peer-id": s.id.String(),
+				"error":   errors.New(msg),
+			})
 		} else {
 			plog.Errorf(msg)
 			plog.Infof("peer %s became inactive (message send to peer failed)", s.id)
@@ -79,7 +83,10 @@ func (s *peerStatus) deactivate(failure failureType, reason string) {
 	}
 
 	if s.lg != nil {
-		s.lg.Debug("peer deactivated again", zap.String("peer-id", s.id.String()), zap.Error(errors.New(msg)))
+		s.lg.Debug("peer deactivated again", map[string]interface{}{
+			"peer-id": s.id.String(),
+			"error":   errors.New(msg),
+		})
 	}
 }
 

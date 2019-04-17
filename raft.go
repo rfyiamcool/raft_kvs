@@ -33,6 +33,7 @@ import (
 	stats "github.com/rfyiamcool/raft_kvs/consensus/v2stats"
 	"github.com/rfyiamcool/raft_kvs/consensus/wal"
 	"github.com/rfyiamcool/raft_kvs/consensus/wal/walpb"
+	logtool "github.com/rfyiamcool/raft_kvs/log"
 
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/fileutil"
 	"github.com/rfyiamcool/raft_kvs/consensus/utils/types"
@@ -316,7 +317,7 @@ func (rc *raftNode) startRaft() {
 
 	// mark node and cluster ID
 	rc.transport = &rafthttp.Transport{
-		Logger:      zap.NewExample(),
+		Logger:      logtool.RLog,
 		ID:          types.ID(rc.id),
 		ClusterID:   99,
 		Raft:        rc,
