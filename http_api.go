@@ -62,6 +62,7 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 		count         = 1
 		concurrent    = 1
 		concurrentStr = r.PostForm.Get("concurrent")
+		value         = r.PostForm.Get("value")
 		err           error
 	)
 
@@ -101,7 +102,7 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 				}
 
 				idStr := fmt.Sprintf("%v", gid)
-				h.store.Propose(idStr, start.String())
+				h.store.Propose(idStr, value)
 			}
 		}()
 	}
@@ -109,9 +110,11 @@ func (h *httpKVAPI) handleBatchPut(w http.ResponseWriter, r *http.Request) {
 	wg.Wait()
 
 	take := time.Now().Sub(start)
-	resp := fmt.Sprintf("total count: %d, thread: %v, time cost: %v",
+	resp := fmt.Sprintf("total count: %d, incr: %d, thread: %v, val: %v,time cost: %v",
 		count,
+		incr,
 		concurrent,
+		value,
 		take.String(),
 	)
 
