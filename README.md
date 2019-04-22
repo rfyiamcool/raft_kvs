@@ -94,23 +94,23 @@ benchmark raft log replication performance
 **Concurrent 1 workers**
 
 ```
-7 w QPS/S
+3 w QPS/S
 ```
 
 **Concurrent 20 workers**
 
 ```
-15 w QPS/S
+4 w QPS/S
 ```
 
 **Concurrent 100 workers**
 
 ```
-17 w QPS/S
+4.5 w QPS/S
 ```
 
 **Concurrent 500 workers**
 
 ```
-14 w QPS/S
+4 w QPS/S
 ```
